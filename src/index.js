@@ -2,14 +2,13 @@ import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import { PixabayAPI, PixabayAPI } from './PixabayAPI';
 import { createMurcup } from './createMarkup';
 import { refs } from './refs';
-// import SimpleLightbox from "simplelightbox";
-// import "simplelightbox/dist/simple-lightbox.min.css";
-const pixabay = new PixabayAPI();
 
+const pixabay = new PixabayAPI();
+// -----------------------------------------------------------
 const handleSubmit = event => {
   event.preventDefault();
 
-  const {
+  const { 
     elements: { searchQuery },
   } = event.currentTarget;
   const inputValue = searchQuery.value.trim().toLowerCase();
@@ -24,14 +23,21 @@ const handleSubmit = event => {
   pixabay
     .getPhotos()
     .then(({ hits, total }) => {
+      if (total > 0) {
+        Notify.success(`We found ${total} images by query 
+        "${inputValue}"`);
+      } else {
+        Notify.failure(
+          'Sorry, there are no images matching your search query. Please try again.'
+        );
+      }
       const markup = createMurcup(hits);
       refs.gallaryUl.insertAdjacentHTML('beforeend', markup);
 
       pixabay.calculateTotalPages(total);
-      Notify.success(`We found ${total} images by query "${inputValue}"`);
+
       if (pixabay.isShowLoadMore) {
         refs.loadMoreBtn.classList.remove('is-hidden');
-        
       }
     })
     .catch(error => {
@@ -40,10 +46,13 @@ const handleSubmit = event => {
     });
 };
 
+// ---------------------------------------------------------------------
 const onLoadMore = () => {
   pixabay.incrementPage();
+
   if (!pixabay.isShowLoadMore) {
     refs.loadMoreBtn.classList.add('is-hidden');
+    Notify.info("We're sorry, but you've reached the end of search results.");
   }
 
   pixabay
@@ -57,7 +66,7 @@ const onLoadMore = () => {
       clearPage();
     });
 };
-
+// -------------------------------------------------------------------
 refs.form.addEventListener('submit', handleSubmit);
 refs.loadMoreBtn.addEventListener('click', onLoadMore);
 
