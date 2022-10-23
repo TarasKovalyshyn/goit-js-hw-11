@@ -5,7 +5,6 @@ import { refs } from './refs';
 // import SimpleLightbox from "simplelightbox";
 // import "simplelightbox/dist/simple-lightbox.min.css";
 const pixabay = new PixabayAPI();
-// console.log(pixabay);
 
 const handleSubmit = event => {
   event.preventDefault();
@@ -13,26 +12,57 @@ const handleSubmit = event => {
   const {
     elements: { searchQuery },
   } = event.currentTarget;
-  const inputQuery = searchQuery.value.trim().toLowerCase();
+  const inputValue = searchQuery.value.trim().toLowerCase();
 
-
-  if (!inputQuery) {
-    Notify.failure('go fuck your self, it`s empty');
+  if (!inputValue) {
+    Notify.failure('Search string is empty, type something ');
     return;
   }
-  pixabay.searchQuery = inputQuery;
-  pixabay.getPhotos().then(({ hits }) => {
-    const markup = createMurcup(hits);
-    refs.gallaryUl.insertAdjacentHTML('beforeend', markup);
-  });
+
+  pixabay.searchQuery = inputValue;
+  clearPage();
+  pixabay
+    .getPhotos()
+    .then(({ hits, total }) => {
+      const markup = createMurcup(hits);
+      refs.gallaryUl.insertAdjacentHTML('beforeend', markup);
+
+      pixabay.calculateTotalPages(total);
+      Notify.success(`We found ${total} images by query "${inputValue}"`);
+      if (pixabay.isShowLoadMore) {
+        refs.loadMoreBtn.classList.remove('is-hidden');
+        
+      }
+    })
+    .catch(error => {
+      Notify.failure(error.message, 'Something going wrong!');
+      clearPage();
+    });
 };
+
 const onLoadMore = () => {
   pixabay.incrementPage();
-  pixabay.getPhotos().then(({ hits }) => {
-    const markup = createMurcup(hits);
-    refs.gallaryUl.insertAdjacentHTML('beforeend', markup);
-  });
-  
+  if (!pixabay.isShowLoadMore) {
+    refs.loadMoreBtn.classList.add('is-hidden');
+  }
+
+  pixabay
+    .getPhotos()
+    .then(({ hits }) => {
+      const markup = createMurcup(hits);
+      refs.gallaryUl.insertAdjacentHTML('beforeend', markup);
+    })
+    .catch(error => {
+      Notify.failure(error.message, 'Something going wrong!');
+      clearPage();
+    });
 };
+
 refs.form.addEventListener('submit', handleSubmit);
 refs.loadMoreBtn.addEventListener('click', onLoadMore);
+
+function clearPage() {
+  pixabay.resetPage();
+  refs.gallaryUl.innerHTML = '';
+  refs.loadMoreBtn.classList.add('is-hidden');
+}
